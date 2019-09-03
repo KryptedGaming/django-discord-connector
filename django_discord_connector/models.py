@@ -59,9 +59,9 @@ class DiscordToken(models.Model):
 
 class DiscordUser(models.Model):
     username = models.CharField(max_length=255)
-    nickname = models.CharField(max_length=255)
+    nickname = models.CharField(max_length=255, null=True, blank=True)
     external_id = models.BigIntegerField(unique=True)
-    groups = models.ManyToManyField("DiscordGroup")
+    groups = models.ManyToManyField("DiscordGroup", blank=True)
 
     def __str__(self):
         if self.nickname:
@@ -77,7 +77,7 @@ class DiscordGroup(models.Model):
 
     def __str__(self):
         if self.group:
-            return "<%s:%s>" % (name, self.group.name)
+            return "<%s:%s>" % (self.name, self.group.name)
         return "<%s>" % self.name
 
 

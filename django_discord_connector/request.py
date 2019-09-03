@@ -18,6 +18,11 @@ class DiscordRequest():
             self.secret = secret
             self.bot_token = bot_token
 
+    @staticmethod
+    def get_instance():
+        from django_discord_connector.models import DiscordClient
+        return DiscordRequest(settings=DiscordClient.get_instance().serialize())
+
     def activate(self):
         prefix = "?"
         bot = commands.Bot(command_prefix=prefix)
@@ -25,7 +30,7 @@ class DiscordRequest():
 
     def get_discord_user(self, user_id):
         url = self.api_endpoint + "/guilds/" + \
-            self.server_id + "/members/" + str(user_id)
+            str(self.server_id) + "/members/" + str(user_id)
         response = requests.get(url, headers={
             'Content-Type': 'application/x-www-form-urlencoded',
             'Authorization': 'Bot ' + self.bot_token
@@ -40,8 +45,8 @@ class DiscordRequest():
         })
         return response
 
-    def add_role_to_user(self, user_id, role_id):
-        url = self.api_endpoint + "/guilds/" + self.server_id + \
+    def add_role_to_user(self, role_id, user_id):
+        url = self.api_endpoint + "/guilds/" + str(self.server_id) + \
             "/members/" + str(user_id) + "/roles/" + str(role_id)
         response = requests.put(url, headers={
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -49,8 +54,8 @@ class DiscordRequest():
         })
         return response
 
-    def remove_role_from_user(self, user_id, role_id):
-        url = self.api_endpoint + "/guilds/" + self.server_id + \
+    def remove_role_from_user(self, role_id, user_id):
+        url = self.api_endpoint + "/guilds/" + str(self.server_id) + \
             "/members/" + str(user_id) + "/roles/" + str(role_id)
         response = requests.delete(url, headers={
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -59,7 +64,7 @@ class DiscordRequest():
         return response
 
     def add_role_to_server(self, role_name):
-        url = self.api_endpoint + "/guilds/" + self.server_id + "/roles"
+        url = self.api_endpoint + "/guilds/" + str(self.server_id) + "/roles"
         data = json.dumps({'name': role_name})
         response = requests.post(url,
                                  data=data,
@@ -72,7 +77,7 @@ class DiscordRequest():
 
     def remove_role_from_server(self, role_id):
         url = self.api_endpoint + "/guilds/" + \
-            self.server_id + "/roles/" + str(role_id)
+            str(self.server_id) + "/roles/" + str(role_id)
         response = requests.delete(url, headers={
             'Content-Type': 'application/x-www-form-urlencoded',
             'Authorization': 'Bot ' + self.bot_token
@@ -103,7 +108,8 @@ class DiscordRequest():
         return response
 
     def get_guild_channels(self):
-        url = self.api_endpoint + "/guilds/" + str(self.server_id) + "/channels"
+        url = self.api_endpoint + "/guilds/" + \
+            str(self.server_id) + "/channels"
         response = requests.get(
             url,
             headers={

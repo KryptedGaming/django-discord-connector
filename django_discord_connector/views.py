@@ -31,6 +31,7 @@ def sso_callback(request):
     token = json['access_token']
     me = requests.get('https://discordapp.com/api/users/@me',
                       headers={'Authorization': "Bearer " + token}).json()
+    print(me)
     join = requests.post(discord_client.invite_link, headers={
                          'Authorization': "Bearer " + token}).json()
     # Catch errors
