@@ -4,6 +4,9 @@ from django.contrib.auth.models import User
 from .models import DiscordUser, DiscordGroup
 from .tasks import add_discord_group_to_discord_user, remove_discord_group_from_discord_user
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 @receiver(m2m_changed, sender=User.groups.through)
 def user_group_change_sync_discord_groups(sender, **kwargs):
