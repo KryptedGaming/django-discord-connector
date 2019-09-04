@@ -92,8 +92,10 @@ def update_discord_user(discord_user_id):
 def sync_discord_user_discord_groups(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
     response = discord_request.get_discord_user(discord_user_id)
-    discord_user_remote_role_ids = set([int(role_id) for role_id in response.json()['roles']])
-    discord_user_local_role_ids = set(discord_user.groups.all().values_list('external_id', flat=True))
+    discord_user_remote_role_ids = set(
+        [int(role_id) for role_id in response.json()['roles']])
+    discord_user_local_role_ids = set(
+        discord_user.groups.all().values_list('external_id', flat=True))
 
     logger.debug("remote: %s" % discord_user_remote_role_ids)
     logger.debug("local: %s" % discord_user_local_role_ids)
@@ -114,7 +116,7 @@ def sync_discord_user_discord_groups(discord_user_id):
             discord_groups_to_remove = discord_user_local_role_ids - discord_user_remote_role_ids
             logger.info("Discord groups to add: %s" % discord_groups_to_add)
             logger.info("Discord groups to remove: %s" %
-                         discord_groups_to_remove)
+                        discord_groups_to_remove)
             for discord_group_id in discord_groups_to_add:
                 discord_group = DiscordGroup.objects.get(
                     external_id=discord_group_id)
@@ -137,7 +139,7 @@ def sync_discord_user_discord_groups(discord_user_id):
             discord_groups_to_add = discord_user_local_role_ids - discord_user_remote_role_ids
             logger.info("Discord groups to add: %s" % discord_groups_to_add)
             logger.info("Discord groups to remove: %s" %
-                         discord_groups_to_remove)
+                        discord_groups_to_remove)
             for discord_group_id in discord_groups_to_remove:
                 remove_discord_group_from_discord_user.apply_async(
                     args=[discord_group_id, discord_user_id])
@@ -157,12 +159,17 @@ def sync_discord_user_discord_groups(discord_user_id):
 
 @shared_task(rate_limit="1/s")
 def add_discord_group_to_discord_user(discord_group_id, discord_user_id):
+    discord_group = DiscordGroup.objects.get(external_id=discord_group_id)
+    discord_user = DiscordUser.objects.get(external_id=discord_user_id)
     response = discord_request.add_role_to_user(
         discord_group_id, discord_user_id)
     if responses[response.status_code] == "No Content":
-        discord_user = DiscordUser.objects.get(external_id=discord_user_id)
         logger.info("Succesfully added Discord role %s to Discord user %s" % (
             discord_group_id, discord_user_id))
+        discord_user.groups.add(discord_group)
+        if discord_group.group and discord_group.group not in discord_user.discord_token.user.groups.all():
+            discord_user.discord_token.user.groups.add(iscord_group.group)
+
     elif responses[response.status_code] == "Too Many Requests":
         logger.warning("[RATELIMIT] adding Discord group %s to Discord User %s" % (
             discord_group_id, discord_user_id))
@@ -175,14 +182,17 @@ def add_discord_group_to_discord_user(discord_group_id, discord_user_id):
 
 @shared_task(rate_limit="1/s")
 def remove_discord_group_from_discord_user(discord_group_id, discord_user_id):
+    discord_group = DiscordGroup.objects.get(external_id=discord_group_id)
+    discord_user = DiscordUser.objects.get(external_id=discord_user_id)
     response = discord_request.remove_role_from_user(
         discord_group_id, discord_user_id)
     if responses[response.status_code] == "No Content":
-        discord_user = DiscordUser.objects.get(external_id=discord_user_id)
         logger.info("Succesfully removed Discord role %s from Discord user %s" % (
             discord_group_id, discord_user_id))
         discord_user.groups.remove(
             DiscordGroup.objects.get(external_id=discord_group_id))
+        if discord_group.group and discord_group.group in discord_user.discord_token.user.groups.all():
+            discord_user.discord_token.user.groups.remove(iscord_group.group)
     elif responses[response.status_code] == "Too Many Requests":
         logger.warning("[RATELIMIT] removing Discord group %s from Discord User %s" % (
             discord_group_id, discord_user_id))

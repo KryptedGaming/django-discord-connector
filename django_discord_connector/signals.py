@@ -26,7 +26,7 @@ def user_group_change_sync_discord_groups(sender, **kwargs):
     if action == "post_remove":
         for group_id in group_ids:
             try:
-                discord_group = DiscordGroup.objects.get(group_id=group_id)
+                discord_group = DiscordGroup.objects.get(group__id=group_id)
                 remove_discord_group_from_discord_user.apply_async(
                     args=[discord_group.external_id, discord_user.external_id])
             except DiscordGroup.DoesNotExist:
@@ -35,7 +35,7 @@ def user_group_change_sync_discord_groups(sender, **kwargs):
     elif action == "post_add":
         for group_id in group_ids:
             try:
-                discord_group = DiscordGroup.objects.get(group_id=group_id)
+                discord_group = DiscordGroup.objects.get(group__id=group_id)
                 add_discord_group_to_discord_user.apply_async(
                     args=[discord_group.external_id, discord_user.external_id])
             except DiscordGroup.DoesNotExist:
