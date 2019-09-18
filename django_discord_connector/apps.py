@@ -5,6 +5,7 @@ from django.db.models.signals import m2m_changed
 class DjangoDiscordConnectorConfig(AppConfig):
     name = 'django_discord_connector'
     verbose_name = 'discord'
+    url_slug = 'discord'
 
     def ready(self):
         from .signals import user_group_change_sync_discord_groups

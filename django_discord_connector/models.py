@@ -20,6 +20,8 @@ class DiscordClient(models.Model):
     invite_link = models.URLField()
 
     def save(self, *args, **kwargs):
+        if "discord.gg/" in self.invite_link:
+            self.invite_link = self.invite_link.replace('discord.gg/', 'discordapp.com/api/invites/')
         super(DiscordClient, self).save(*args, **kwargs)
 
     @staticmethod
@@ -59,9 +61,14 @@ class DiscordToken(models.Model):
 
 class DiscordUser(models.Model):
     username = models.CharField(max_length=255)
-    nickname = models.CharField(max_length=255, null=True, blank=True)
+    nickname = models.CharField(max_length=255)
     external_id = models.BigIntegerField(unique=True)
     groups = models.ManyToManyField("DiscordGroup", blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.nickname:
+            self.nickname = self.username 
+        super(DiscordUser, self).save(*args, **kwargs)
 
     def __str__(self):
         if self.nickname:

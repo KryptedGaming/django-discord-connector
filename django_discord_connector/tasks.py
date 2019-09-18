@@ -7,8 +7,7 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-discord_client = DiscordClient.get_instance()
-discord_request = DiscordRequest(settings=discord_client.serialize())
+
 
 """
 Cron Tasks
@@ -26,7 +25,7 @@ def sync_discord_users():
 def sync_discord_groups():
     # convert role list into dict of IDs
     discord_guild_roles = {
-        role['id']: role for role in discord_request.get_guild_roles().json()}
+        role['id']: role for role in DiscordRequest.get_instance().get_guild_roles().json()}
     discord_local_roles = list(DiscordGroup.objects.all().values_list(
         'external_id', flat=True))  # get list of local roles we know about from database
 
@@ -49,7 +48,7 @@ def sync_discord_groups():
 @shared_task
 def sync_discord_channels():
     discord_guild_channels = {
-        channel['id']: channel for channel in discord_request.get_guild_channels().json()}
+        channel['id']: channel for channel in DiscordRequest.get_instance().get_guild_channels().json()}
     discord_local_channels = list(DiscordChannel.objects.all().values_list(
         'external_id', flat=True))
 
@@ -75,7 +74,7 @@ Tasks related to keeping DiscordUser objects up to date.
 @shared_task
 def update_discord_user(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
-    response = discord_request.get_discord_user(discord_user_id)
+    response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
     if responses[response.status_code] == 'OK':
         response = response.json()
         discord_user.nickname = response['nick'] + \
@@ -91,7 +90,7 @@ def update_discord_user(discord_user_id):
 @shared_task
 def sync_discord_user_discord_groups(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
-    response = discord_request.get_discord_user(discord_user_id)
+    response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
     discord_user_remote_role_ids = set(
         [int(role_id) for role_id in response.json()['roles']])
     discord_user_local_role_ids = set(
@@ -161,7 +160,7 @@ def sync_discord_user_discord_groups(discord_user_id):
 def add_discord_group_to_discord_user(discord_group_id, discord_user_id):
     discord_group = DiscordGroup.objects.get(external_id=discord_group_id)
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
-    response = discord_request.add_role_to_user(
+    response = DiscordRequest.get_instance().add_role_to_user(
         discord_group_id, discord_user_id)
     if responses[response.status_code] == "No Content":
         logger.info("Succesfully added Discord role %s to Discord user %s" % (
@@ -184,7 +183,7 @@ def add_discord_group_to_discord_user(discord_group_id, discord_user_id):
 def remove_discord_group_from_discord_user(discord_group_id, discord_user_id):
     discord_group = DiscordGroup.objects.get(external_id=discord_group_id)
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
-    response = discord_request.remove_role_from_user(
+    response = DiscordRequest.get_instance().remove_role_from_user(
         discord_group_id, discord_user_id)
     if responses[response.status_code] == "No Content":
         logger.info("Succesfully removed Discord role %s from Discord user %s" % (
