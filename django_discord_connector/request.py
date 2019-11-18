@@ -9,7 +9,7 @@ class DiscordRequest():
             self.api_endpoint = str(settings['api_endpoint'])
             self.server_id = int(settings['server_id'])
             self.client_id = int(settings['client_id'])
-            self.secret = str(settings['secret'])
+            self.secret = str(settings['client_secret'])
             self.bot_token = str(settings['bot_token'])
         else:
             self.api_endpoint = api_endpoint
