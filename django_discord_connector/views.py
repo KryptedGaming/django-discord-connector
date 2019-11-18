@@ -14,7 +14,7 @@ def sso_callback(request):
 
     data = {
         "client_id": discord_client.client_id,
-        "client_secret": discord_client.secret,
+        "client_secret": discord_client.client_secret,
         "grant_type": "authorization_code",
         "code": request.GET['code'],
         "redirect_uri": discord_client.callback_url,

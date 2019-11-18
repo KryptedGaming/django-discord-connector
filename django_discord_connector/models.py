@@ -13,9 +13,9 @@ class DiscordClient(models.Model):
         default="https://discordapp.com/api/oauth2/token/revoke")
 
     callback_url = models.URLField()
-    server_id = models.IntegerField()
-    client_id = models.IntegerField()
-    secret = models.CharField(max_length=255)
+    server_id = models.TextField()
+    client_id = models.TextField()
+    client_secret = models.CharField(max_length=255)
     bot_token = models.CharField(max_length=255)
     invite_link = models.URLField()
 
@@ -34,9 +34,9 @@ class DiscordClient(models.Model):
     def serialize(self):
         return {
             "api_endpoint": self.api_endpoint,
-            "server_id": self.server_id,
-            "client_id": self.client_id,
-            "secret": self.secret,
+            "server_id": int(self.server_id),
+            "client_id": int(self.client_id),
+            "client_secret": self.client_secret,
             "bot_token": self.bot_token,
         }
 
