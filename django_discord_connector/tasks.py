@@ -14,9 +14,13 @@ Cron Tasks
 These are tasks to be set up on a crontab schedule
 """
 @shared_task
-def sync_discord_users():
+def sync_discord_users_accounts():
     for discord_user in DiscordUser.objects.all():
         update_discord_user.apply_async(args=[discord_user.external_id])
+
+@shared_task
+def sync_discord_users_groups():
+    for discord_user in DiscordUser.objects.all():
         sync_discord_user_discord_groups.apply_async(
             args=[discord_user.external_id])
 
@@ -35,11 +39,14 @@ def sync_discord_groups():
     discord_roles_to_add = set(
         discord_guild_roles.keys()) - set(discord_local_roles)
 
+    print(discord_roles_to_remove)
+    print(discord_roles_to_add)
+
     for role_id in discord_roles_to_remove:
         DiscordGroup.objects.get(external_id=role_id).delete()
 
     for role_id in discord_roles_to_add:
-        if not discord_guild_roles[role_id]['hoist']:
+        if discord_guild_roles[role_id]['name'] in ['@everyone']:
             continue
         DiscordGroup.objects.create(
             name=discord_guild_roles[role_id]['name'], external_id=role_id)
@@ -71,7 +78,7 @@ def sync_discord_channels():
 Discord User tasks
 Tasks related to keeping DiscordUser objects up to date.
 """
-@shared_task
+@shared_task(rate_limit="1/s")
 def update_discord_user(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
     response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
@@ -87,7 +94,7 @@ def update_discord_user(discord_user_id):
             "[%s Response] Failed to update discord user" % response.status_code)
 
 
-@shared_task
+@shared_task(rate_limit="1/s")
 def sync_discord_user_discord_groups(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
     response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
@@ -155,6 +162,57 @@ def sync_discord_user_discord_groups(discord_user_id):
         raise Exception("[%s Response] Failed to sync discord groups for user %s" % (
             response.status_code, discord_user_id))
 
+@shared_task()
+def verify_discord_user_groups(discord_user_id):
+    discord_user = DiscordUser.objects.get(external_id=discord_user_id)
+
+    # Test value DJANGO_DISCORD_REMOTE_PRIORITY in settings, but make it optional
+    try:
+        if settings.DJANGO_DISCORD_REMOTE_PRIORITY:
+            remote_priority = True
+        else:
+            remote_priority = False
+    except AttributeError:
+        remote_priority = False
+
+    if remote_priority:
+        user = discord_user.discord_token.user 
+        django_enabled_group_ids = set([ group.pk for group in discord_user.discord_token.user.groups.all() ])
+        discord_enabled_group_ids = set([ discord_group.group.pk for discord_group in discord_user.groups.all() ])
+        group_pks_to_add = discord_enabled_group_ids - django_enabled_group_ids 
+        group_pks_to_remove = django_enabled_group_ids - discord_enabled_group_ids 
+
+        for group_pk in group_pks_to_add:
+            group = Group.objects.get(pk=group_pk)
+            logger.warning("Local group %s out of sync with Discord remote. Check your setup, this shouldn't happen." % group)
+            user.groups.add(group)
+        for group_pk in group_pks_to_remove:
+            group = Group.objects.get(pk=group_pk)
+            logger.warning("Local group %s out of sync with Discord remote. Check your setup, this shouldn't happen." % group)
+            user.groups.remove(Group.objects.get(pk=group_pk))
+    else:
+        user = discord_user.discord_token.user 
+        django_enabled_group_ids = set([ group.pk for group in discord_user.discord_token.user.groups.all() ])
+        discord_enabled_group_ids = set([ discord_group.group.pk for discord_group in discord_user.groups.all() ])
+        group_pks_to_add = django_enabled_group_ids - discord_enabled_group_ids
+        group_pks_to_remove = discord_enabled_group_ids - django_enabled_group_ids 
+
+        for group_pk in group_pks_to_remove:
+            discord_groups = DiscordGroup.objects.filter(group__pk=group_pk)
+            for discord_group in discord_groups:
+                remove_discord_group_from_discord_user.apply_async(
+                    args=[discord_group.external_id, discord_user_id])
+                logger.info("Removing group %s from user %s due to mismatched local groups" % (
+                    discord_group.external_id, discord_user_id))
+
+        for group_pk in group_pks_to_add:
+            discord_groups = DiscordGroup.objects.filter(group__pk=group_pk)
+            for discord_group in discord_groups:
+                add_discord_group_to_discord_user.apply_async(
+                    args=[discord_group.external_id, discord_user_id])
+                logger.info("Adding group %s from user %s due to mismatched local groups" % (
+                    discord_group.external_id, discord_user_id))
+
 
 @shared_task(rate_limit="1/s")
 def add_discord_group_to_discord_user(discord_group_id, discord_user_id):
@@ -167,7 +225,7 @@ def add_discord_group_to_discord_user(discord_group_id, discord_user_id):
             discord_group_id, discord_user_id))
         discord_user.groups.add(discord_group)
         if discord_group.group and discord_group.group not in discord_user.discord_token.user.groups.all():
-            discord_user.discord_token.user.groups.add(iscord_group.group)
+            discord_user.discord_token.user.groups.add(discord_group.group)
 
     elif responses[response.status_code] == "Too Many Requests":
         logger.warning("[RATELIMIT] adding Discord group %s to Discord User %s" % (
@@ -191,7 +249,7 @@ def remove_discord_group_from_discord_user(discord_group_id, discord_user_id):
         discord_user.groups.remove(
             DiscordGroup.objects.get(external_id=discord_group_id))
         if discord_group.group and discord_group.group in discord_user.discord_token.user.groups.all():
-            discord_user.discord_token.user.groups.remove(iscord_group.group)
+            discord_user.discord_token.user.groups.remove(discord_group.group)
     elif responses[response.status_code] == "Too Many Requests":
         logger.warning("[RATELIMIT] removing Discord group %s from Discord User %s" % (
             discord_group_id, discord_user_id))

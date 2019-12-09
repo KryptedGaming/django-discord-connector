@@ -10,6 +10,7 @@ There are several behaviors that the application will add:
 2. Include the django_discord_connector URLs in your urls.py
 3. Run `python3 manage.py migrate` to create the django_discord_connector tables
 4. Create a DiscordClient in the administration panel
+5. Load the default periodic tasks `python3 manage.py loaddata discord_default_schedule.json`
 
 ## Settings
 The Django Discord Connector adds settings which change the behavior of the celery tasks and other functionality.

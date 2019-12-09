@@ -1,0 +1,83 @@
+[
+   {
+      "model":"django_celery_beat.periodictask",
+      "pk":13,
+      "fields":{
+         "name":"Hard Sync Discord User Groups",
+         "task":"django_discord_connector.tasks.sync_discord_users_groups",
+         "interval":2,
+         "crontab":null,
+         "solar":null,
+         "clocked":null,
+         "args":"[]",
+         "kwargs":"{}",
+         "queue":null,
+         "exchange":null,
+         "routing_key":null,
+         "headers":"{}",
+         "priority":null,
+         "expires":null,
+         "one_off":false,
+         "start_time":null,
+         "enabled":true,
+         "last_run_at":null,
+         "total_run_count":0,
+         "date_changed":"2019-12-05T21:30:47.967Z",
+         "description":"Hard syncs Discord user groups, just in case we've fallen out of sync from the remote Discord server. \r\n\r\nVery rarely should this actually do anything, so it doesn't need to be ran very often."
+      }
+   },
+   {
+      "model":"django_celery_beat.periodictask",
+      "pk":14,
+      "fields":{
+         "name":"Update Discord Users' Information",
+         "task":"django_discord_connector.tasks.sync_discord_users_accounts",
+         "interval":4,
+         "crontab":null,
+         "solar":null,
+         "clocked":null,
+         "args":"[]",
+         "kwargs":"{}",
+         "queue":null,
+         "exchange":null,
+         "routing_key":null,
+         "headers":"{}",
+         "priority":null,
+         "expires":null,
+         "one_off":false,
+         "start_time":null,
+         "enabled":true,
+         "last_run_at":null,
+         "total_run_count":0,
+         "date_changed":"2019-12-05T21:31:26.456Z",
+         "description":"Update nicknames and usernames. People don't change this stuff very often, so it's infrequent."
+      }
+   },
+   {
+      "model":"django_celery_beat.periodictask",
+      "pk":15,
+      "fields":{
+         "name":"Verify Discord User Groups",
+         "task":"django_discord_connector.tasks.verify_discord_user_groups",
+         "interval":1,
+         "crontab":null,
+         "solar":null,
+         "clocked":null,
+         "args":"[]",
+         "kwargs":"{}",
+         "queue":null,
+         "exchange":null,
+         "routing_key":null,
+         "headers":"{}",
+         "priority":null,
+         "expires":null,
+         "one_off":false,
+         "start_time":null,
+         "enabled":true,
+         "last_run_at":null,
+         "total_run_count":0,
+         "date_changed":"2019-12-05T21:32:14.938Z",
+         "description":"Fast, lightweight check to make sure people have the Discord groups that they need."
+      }
+   }
+]

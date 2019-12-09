@@ -2,7 +2,7 @@ from django.dispatch import receiver
 from django.db.models.signals import m2m_changed
 from django.contrib.auth.models import User
 from .models import DiscordUser, DiscordGroup
-from .tasks import add_discord_group_to_discord_user, remove_discord_group_from_discord_user
+from .tasks import verify_discord_user_groups
 
 import logging
 logger = logging.getLogger(__name__)
@@ -21,23 +21,5 @@ def user_group_change_sync_discord_groups(sender, **kwargs):
             "DiscordUser not found for %s, skipping group sync" % django_user)
         return
 
-    group_ids = [pk for pk in kwargs.get('pk_set')]
-
-    if action == "post_remove":
-        for group_id in group_ids:
-            try:
-                discord_group = DiscordGroup.objects.get(group__id=group_id)
-                remove_discord_group_from_discord_user.apply_async(
-                    args=[discord_group.external_id, discord_user.external_id])
-            except DiscordGroup.DoesNotExist:
-                logger.info(
-                    "DiscordGroup not found for %s, skipping group sync" % group_id)
-    elif action == "post_add":
-        for group_id in group_ids:
-            try:
-                discord_group = DiscordGroup.objects.get(group__id=group_id)
-                add_discord_group_to_discord_user.apply_async(
-                    args=[discord_group.external_id, discord_user.external_id])
-            except DiscordGroup.DoesNotExist:
-                logger.info(
-                    "DiscordGroup not found for %s, skipping group sync" % group_id)
+    if "post" in kwargs.get('action'):
+        verify_discord_user_groups.apply_async(args=[discord_user.external_id], countdown=30)
