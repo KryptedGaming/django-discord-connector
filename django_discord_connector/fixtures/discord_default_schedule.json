@@ -4,7 +4,7 @@
       "pk":13,
       "fields":{
          "name":"Hard Sync Discord User Groups",
-         "task":"django_discord_connector.tasks.sync_discord_users_groups",
+         "task":"django_discord_connector.tasks.remote_sync_all_discord_users_groups",
          "interval":2,
          "crontab":null,
          "solar":null,
@@ -58,7 +58,7 @@
       "pk":15,
       "fields":{
          "name":"Verify Discord User Groups",
-         "task":"django_discord_connector.tasks.verify_discord_user_groups",
+         "task":"django_discord_connector.tasks.verify_all_discord_users_groups",
          "interval":1,
          "crontab":null,
          "solar":null,

@@ -1,6 +1,7 @@
 from celery import shared_task
 from django_discord_connector.models import DiscordUser, DiscordGroup, DiscordClient, DiscordChannel
 from django_discord_connector.request import DiscordRequest
+from django.contrib.auth.models import Group 
 from django.conf import settings
 from http.client import responses
 import logging
@@ -14,15 +15,22 @@ Cron Tasks
 These are tasks to be set up on a crontab schedule
 """
 @shared_task
-def sync_discord_users_accounts():
+def sync_all_discord_users_accounts():
     for discord_user in DiscordUser.objects.all():
         update_discord_user.apply_async(args=[discord_user.external_id])
 
 @shared_task
-def sync_discord_users_groups():
+def remote_sync_all_discord_users_groups():
     for discord_user in DiscordUser.objects.all():
-        sync_discord_user_discord_groups.apply_async(
+        remote_sync_discord_user_discord_groups.apply_async(
             args=[discord_user.external_id])
+
+@shared_task
+def verify_all_discord_users_groups():
+    for discord_user in DiscordUser.objects.all():
+        verify_discord_user_groups.apply_async(
+            args=[discord_user.external_id]
+        )
 
 
 @shared_task
@@ -95,7 +103,7 @@ def update_discord_user(discord_user_id):
 
 
 @shared_task(rate_limit="1/s")
-def sync_discord_user_discord_groups(discord_user_id):
+def remote_sync_discord_user_discord_groups(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
     response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
     discord_user_remote_role_ids = set(
