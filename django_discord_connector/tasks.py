@@ -37,7 +37,7 @@ def verify_all_discord_users_groups():
 def sync_discord_groups():
     # convert role list into dict of IDs
     discord_guild_roles = {
-        role['id']: role for role in DiscordRequest.get_instance().get_guild_roles().json()}
+        int(role['id']): role for role in DiscordRequest.get_instance().get_guild_roles().json()}
     discord_local_roles = list(DiscordGroup.objects.all().values_list(
         'external_id', flat=True))  # get list of local roles we know about from database
 
@@ -47,17 +47,17 @@ def sync_discord_groups():
     discord_roles_to_add = set(
         discord_guild_roles.keys()) - set(discord_local_roles)
 
-    print(discord_roles_to_remove)
-    print(discord_roles_to_add)
-
     for role_id in discord_roles_to_remove:
         DiscordGroup.objects.get(external_id=role_id).delete()
 
     for role_id in discord_roles_to_add:
         if discord_guild_roles[role_id]['name'] in ['@everyone']:
             continue
-        DiscordGroup.objects.create(
-            name=discord_guild_roles[role_id]['name'], external_id=role_id)
+        if not DiscordGroup.objects.filter(external_id=role_id).exists():
+            DiscordGroup.objects.create(
+                name=discord_guild_roles[role_id]['name'], external_id=role_id)
+        else:
+            DiscordGroup.objects.update(name=discord_guild_roles[role_id]['name'])
 
 
 @shared_task
@@ -108,8 +108,9 @@ def remote_sync_discord_user_discord_groups(discord_user_id):
     response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
     discord_user_remote_role_ids = set(
         [int(role_id) for role_id in response.json()['roles']])
-    discord_user_local_role_ids = set(
-        discord_user.groups.all().values_list('external_id', flat=True))
+    
+    discord_group_managed_ids = set(DiscordGroup.objects.exclude(group=None).values_list('external_id', flat=True))
+    discord_user_local_role_ids = set(discord_user.groups.all().values_list('external_id', flat=True))
 
     logger.debug("remote: %s" % discord_user_remote_role_ids)
     logger.debug("local: %s" % discord_user_local_role_ids)
@@ -132,6 +133,8 @@ def remote_sync_discord_user_discord_groups(discord_user_id):
             logger.info("Discord groups to remove: %s" %
                         discord_groups_to_remove)
             for discord_group_id in discord_groups_to_add:
+                if discord_group_id not in discord_group_managed_ids:
+                    continue
                 discord_group = DiscordGroup.objects.get(
                     external_id=discord_group_id)
                 discord_user.groups.add(discord_group)
@@ -140,6 +143,8 @@ def remote_sync_discord_user_discord_groups(discord_user_id):
                         discord_group.group)
 
             for discord_group_id in discord_groups_to_remove:
+                if discord_group_id not in discord_group_managed_ids:
+                    continue
                 discord_group = DiscordGroup.objects.get(
                     external_id=discord_group_id)
                 discord_user.groups.remove(discord_group)
@@ -155,12 +160,16 @@ def remote_sync_discord_user_discord_groups(discord_user_id):
             logger.info("Discord groups to remove: %s" %
                         discord_groups_to_remove)
             for discord_group_id in discord_groups_to_remove:
+                if discord_group_id not in discord_group_managed_ids:
+                    continue
                 remove_discord_group_from_discord_user.apply_async(
                     args=[discord_group_id, discord_user_id])
                 logger.info("Removing group %s from user %s due to mismatched local groups" % (
                     discord_group_id, discord_user_id))
 
             for discord_group_id in discord_groups_to_add:
+                if discord_group_id not in discord_group_managed_ids:
+                    continue
                 add_discord_group_to_discord_user.apply_async(
                     args=[discord_group_id, discord_user_id])
                 logger.info("Adding group %s to user %s due to mismatched local groups" % (
