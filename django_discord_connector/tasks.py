@@ -1,7 +1,7 @@
 from celery import shared_task
 from django_discord_connector.models import DiscordUser, DiscordGroup, DiscordClient, DiscordChannel
 from django_discord_connector.request import DiscordRequest
-from django.contrib.auth.models import Group 
+from django.contrib.auth.models import Group
 from django.conf import settings
 from http.client import responses
 import logging
@@ -19,11 +19,13 @@ def sync_all_discord_users_accounts():
     for discord_user in DiscordUser.objects.all():
         update_discord_user.apply_async(args=[discord_user.external_id])
 
+
 @shared_task
 def remote_sync_all_discord_users_groups():
     for discord_user in DiscordUser.objects.all():
         remote_sync_discord_user_discord_groups.apply_async(
             args=[discord_user.external_id])
+
 
 @shared_task
 def verify_all_discord_users_groups():
@@ -48,16 +50,21 @@ def sync_discord_groups():
         discord_guild_roles.keys()) - set(discord_local_roles)
 
     for role_id in discord_roles_to_remove:
+        logger.info("Removing Discord role %s" % role_id)
         DiscordGroup.objects.get(external_id=role_id).delete()
 
     for role_id in discord_roles_to_add:
         if discord_guild_roles[role_id]['name'] in ['@everyone']:
+            logger.info("Skipping Discord role %s" % role_id)
             continue
         if not DiscordGroup.objects.filter(external_id=role_id).exists():
+            logger.info("Creating Discord role %s" % role_id)
             DiscordGroup.objects.create(
                 name=discord_guild_roles[role_id]['name'], external_id=role_id)
         else:
-            DiscordGroup.objects.update(name=discord_guild_roles[role_id]['name'])
+            logger.info("Updating name for Discord role %s" % role_id)
+            DiscordGroup.objects.update(
+                name=discord_guild_roles[role_id]['name'])
 
 
 @shared_task
@@ -108,9 +115,11 @@ def remote_sync_discord_user_discord_groups(discord_user_id):
     response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
     discord_user_remote_role_ids = set(
         [int(role_id) for role_id in response.json()['roles']])
-    
-    discord_group_managed_ids = set(DiscordGroup.objects.exclude(group=None).values_list('external_id', flat=True))
-    discord_user_local_role_ids = set(discord_user.groups.all().values_list('external_id', flat=True))
+
+    discord_group_managed_ids = set(DiscordGroup.objects.exclude(
+        group=None).values_list('external_id', flat=True))
+    discord_user_local_role_ids = set(
+        discord_user.groups.all().values_list('external_id', flat=True))
 
     logger.debug("remote: %s" % discord_user_remote_role_ids)
     logger.debug("local: %s" % discord_user_local_role_ids)
@@ -179,6 +188,7 @@ def remote_sync_discord_user_discord_groups(discord_user_id):
         raise Exception("[%s Response] Failed to sync discord groups for user %s" % (
             response.status_code, discord_user_id))
 
+
 @shared_task()
 def verify_discord_user_groups(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
@@ -193,26 +203,32 @@ def verify_discord_user_groups(discord_user_id):
         remote_priority = False
 
     if remote_priority:
-        user = discord_user.discord_token.user 
-        django_enabled_group_ids = set([ group.pk for group in discord_user.discord_token.user.groups.all() ])
-        discord_enabled_group_ids = set([ discord_group.group.pk for discord_group in discord_user.groups.all() ])
-        group_pks_to_add = discord_enabled_group_ids - django_enabled_group_ids 
-        group_pks_to_remove = django_enabled_group_ids - discord_enabled_group_ids 
+        user = discord_user.discord_token.user
+        django_enabled_group_ids = set(
+            [group.pk for group in discord_user.discord_token.user.groups.all()])
+        discord_enabled_group_ids = set(
+            [discord_group.group.pk for discord_group in discord_user.groups.all()])
+        group_pks_to_add = discord_enabled_group_ids - django_enabled_group_ids
+        group_pks_to_remove = django_enabled_group_ids - discord_enabled_group_ids
 
         for group_pk in group_pks_to_add:
             group = Group.objects.get(pk=group_pk)
-            logger.warning("Local group %s out of sync with Discord remote. Check your setup, this shouldn't happen." % group)
+            logger.warning(
+                "Local group %s out of sync with Discord remote. Check your setup, this shouldn't happen." % group)
             user.groups.add(group)
         for group_pk in group_pks_to_remove:
             group = Group.objects.get(pk=group_pk)
-            logger.warning("Local group %s out of sync with Discord remote. Check your setup, this shouldn't happen." % group)
+            logger.warning(
+                "Local group %s out of sync with Discord remote. Check your setup, this shouldn't happen." % group)
             user.groups.remove(Group.objects.get(pk=group_pk))
     else:
-        user = discord_user.discord_token.user 
-        django_enabled_group_ids = set([ group.pk for group in discord_user.discord_token.user.groups.all() ])
-        discord_enabled_group_ids = set([ discord_group.group.pk for discord_group in discord_user.groups.all() ])
+        user = discord_user.discord_token.user
+        django_enabled_group_ids = set(
+            [group.pk for group in discord_user.discord_token.user.groups.all()])
+        discord_enabled_group_ids = set(
+            [discord_group.group.pk for discord_group in discord_user.groups.all()])
         group_pks_to_add = django_enabled_group_ids - discord_enabled_group_ids
-        group_pks_to_remove = discord_enabled_group_ids - django_enabled_group_ids 
+        group_pks_to_remove = discord_enabled_group_ids - django_enabled_group_ids
 
         for group_pk in group_pks_to_remove:
             discord_groups = DiscordGroup.objects.filter(group__pk=group_pk)
