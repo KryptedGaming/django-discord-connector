@@ -80,7 +80,7 @@ class DiscordGroup(models.Model):
     name = models.CharField(max_length=255)
     external_id = models.BigIntegerField(unique=True)
     group = models.ForeignKey(
-        Group, null=True, on_delete=models.SET_NULL, related_name="discord_group")
+        Group, null=True, blank=True, on_delete=models.SET_NULL, related_name="discord_group")
 
     def __str__(self):
         if self.group:
