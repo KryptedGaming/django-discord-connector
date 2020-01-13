@@ -225,8 +225,10 @@ def verify_discord_user_groups(discord_user_id):
         user = discord_user.discord_token.user
         django_enabled_group_ids = set(
             [group.pk for group in discord_user.discord_token.user.groups.all()])
-        discord_enabled_group_ids = set(
-            [discord_group.group.pk for discord_group in discord_user.groups.all()])
+        discord_enabled_group_ids = set()
+        for discord_group in discord_user.groups.all():
+            if discord_group.group:
+                discord_enabled_group_ids.add(discord_group.group.pk)
         group_pks_to_add = django_enabled_group_ids - discord_enabled_group_ids
         group_pks_to_remove = discord_enabled_group_ids - django_enabled_group_ids
 
