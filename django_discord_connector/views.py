@@ -8,10 +8,11 @@ import logging
 import base64
 import requests
 
-
 def sso_callback(request):
-    discord_client = DiscordClient.get_instance()
-
+    try:
+        discord_client = DiscordClient.get_instance(request)
+    except: 
+        messages.warning(request, "The site administrator has not added the Discord Client to the admin panel.")
     data = {
         "client_id": discord_client.client_id,
         "client_secret": discord_client.client_secret,
@@ -69,7 +70,11 @@ def sso_callback(request):
 
 def add_sso_token(request):
     scope = (['email', 'guilds.join', 'identify'])
-    discord_client = DiscordClient.get_instance()
+    try:
+        discord_client = DiscordClient.get_instance()
+    except: 
+        messages.warning(request, "The site administrator has not added the Discord Client to the admin panel.")
+        return redirect('/')
     oauth = OAuth2Session(discord_client.client_id,
                           redirect_uri=discord_client.callback_url, scope=scope, token=None, state=None)
     url, state = oauth.authorization_url(discord_client.base_uri)
