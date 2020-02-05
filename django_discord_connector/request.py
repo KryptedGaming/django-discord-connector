@@ -1,6 +1,10 @@
 import json
 import requests
 from discord.ext import commands
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class DiscordRequest():
@@ -116,5 +120,21 @@ class DiscordRequest():
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Authorization': 'Bot ' + self.bot_token
             }
+        )
+        return response
+
+    def update_discord_user_nickname(self, discord_user_id, discord_user_nickname):
+        url = "%s/guilds/%s/members/%s" % (self.api_endpoint, str(self.server_id), discord_user_id)
+        logger.debug("Calling Discord API: %s" % url)
+        data = {
+            "nick": discord_user_nickname,
+        }
+        response = requests.patch(
+            url,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': 'Bot ' + self.bot_token
+            },
+            data=json.dumps(data)
         )
         return response

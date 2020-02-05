@@ -34,6 +34,29 @@ def verify_all_discord_users_groups():
             args=[discord_user.external_id]
         )
 
+@shared_task
+def enforce_discord_nicknames(enforce_strategy):
+    """
+    Paid feature request: https://github.com/KryptedGaming/krypted/issues/302
+    Quick task to pass over all DiscordUsers and enforce nickames as EVE Online character names
+    """
+    
+    for discord_user in DiscordUser.objects.all():
+        if enforce_strategy == "EVE_ONLINE":
+            try:
+                from django_eveonline_connector.models import EveCharacter, EveToken 
+                character_name = EveCharacter.objects.get(token__user=discord_user.discord_token.user, token__primary=True).name 
+                nickname = discord_user.nickname.split("#")[0]
+                discriminator = discord_user.nickname.split("#")[1]
+                if character_name != nickname:
+                    discord_user.nickname = "%s#%s" % (character_name, discriminator)
+                    discord_user.save()
+                    update_remote_discord_user_nickname.apply_async(args=[discord_user.external_id])
+            except Exception as e:
+                logger.error(e)
+        else:
+            pass 
+
 
 @shared_task
 def sync_discord_groups():
@@ -93,6 +116,21 @@ def sync_discord_channels():
 Discord User tasks
 Tasks related to keeping DiscordUser objects up to date.
 """
+
+@shared_task(rate_limit="1/s")
+def update_remote_discord_user_nickname(discord_user_id):
+    discord_user = DiscordUser.objects.get(external_id=discord_user_id)
+    response = DiscordRequest.get_instance().update_discord_user_nickname(discord_user_id, discord_user.nickname.split("#")[0])
+    if responses[response.status_code] == 'No Content':
+        logger.info("Successfully updated Discord nickname for %s" % discord_user_id)
+    elif responses[response.status_code] == "Too Many Requests":
+        logger.warning("[RATELIMIT] Updating nickname for Discord User %s" % (discord_user_id))
+        update_discord_user_nickname.apply_async(
+            args=[discord_user_id], countdown=600)
+    else:
+        logger.error("[%s Response] Failed to update discord user nickname" % response.status_code)
+
+
 @shared_task(rate_limit="1/s")
 def update_discord_user(discord_user_id):
     discord_user = DiscordUser.objects.get(external_id=discord_user_id)
