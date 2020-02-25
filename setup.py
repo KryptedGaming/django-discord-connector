@@ -32,8 +32,8 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],
     install_requires=[
-        'discord',
-        'requests',
-        'requests_oauthlib',
+        'discord==1.0.1',
+        'requests==2.22.0',
+        'requests_oauthlib==1.2.0',
     ]
 )
