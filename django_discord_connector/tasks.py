@@ -143,6 +143,12 @@ def update_discord_user(discord_user_id):
             "#" + response['user']['discriminator']
         discord_user.save()
     else:
+        if 'code' in response.json():
+            if response.json()['code'] == 10007:
+                logger.info(
+                    f"Deleting discord user {discord_user_id}, reason: LEFT SERVER")
+                discord_user.delete()
+                return
         raise Exception(
             "[%s Response] Failed to update discord user" % response.status_code)
 
@@ -306,6 +312,11 @@ def add_discord_group_to_discord_user(discord_group_id, discord_user_id):
         add_discord_group_to_discord_user.apply_async(
             args=[discord_group_id, discord_user_id], countdown=600)
     else:
+        if 'code' in response.json():
+            if response.json()['code'] == 10007:
+                logger.info(f"Deleting discord user {discord_user_id}, reason: LEFT SERVER")
+                discord_user.delete()
+                return 
         raise Exception("[%s Response] Failed to add discord group %s to discord user %s: %s" % (
             response.status_code, discord_group_id, discord_user_id, response.json()))
 
@@ -329,5 +340,11 @@ def remove_discord_group_from_discord_user(discord_group_id, discord_user_id):
         remove_discord_group_from_discord_user.apply_async(
             args=[discord_group_id, discord_user_id], countdown=600)
     else:
+        if 'code' in response.json():
+            if response.json()['code'] == 10007:
+                logger.info(
+                    f"Deleting discord user {discord_user_id}, reason: LEFT SERVER")
+                discord_user.delete()
+                return
         raise Exception("[%s Response] Failed to remove discord group %s from discord user %s : %s" % (
             response.status_code, discord_group_id, discord_user_id, response.json()))

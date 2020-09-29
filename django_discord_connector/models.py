@@ -49,7 +49,7 @@ class DiscordToken(models.Model):
     refresh_token = models.CharField(max_length=255)
 
     discord_user = models.OneToOneField(
-        "DiscordUser", null=True, on_delete=models.SET_NULL, related_name="discord_token")
+        "DiscordUser", null=True, on_delete=models.CASCADE, related_name="discord_token")
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="discord_token")
 
