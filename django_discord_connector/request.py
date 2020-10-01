@@ -88,13 +88,16 @@ class DiscordRequest():
         })
         return response
 
-    def send_channel_message(self, channel_id, message):
+    def send_channel_message(self, channel_id, message=None, embed=None):
         url = self.api_endpoint + "/channels/" + str(channel_id) + "/messages"
-        data = json.dumps({'content': message})
+        data = json.dumps({
+            'content': message,
+            'embed': embed, 
+        })
         response = requests.post(url,
                                  data=data,
                                  headers={
-                                     'Content-Type': 'application/x-www-form-urlencoded',
+                                     'Content-Type': 'application/json',
                                      'Authorization': 'Bot ' + self.bot_token
                                  }
                                  )
@@ -128,6 +131,22 @@ class DiscordRequest():
         logger.debug("Calling Discord API: %s" % url)
         data = {
             "nick": discord_user_nickname,
+        }
+        response = requests.patch(
+            url,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': 'Bot ' + self.bot_token
+            },
+            data=json.dumps(data)
+        )
+        return response
+
+    def create_dm(self, recipient_id):
+        url = "https://discord.com/api/users/@me/channels"
+        logger.debug("Calling Discord API: %s" % url)
+        data = {
+            "recipient_id": recipient_id,
         }
         response = requests.patch(
             url,
