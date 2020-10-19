@@ -16,20 +16,20 @@ These are tasks to be set up on a crontab schedule
 """
 @shared_task
 def sync_all_discord_users_accounts():
-    for discord_user in DiscordUser.objects.all():
+    for discord_user in DiscordUser.objects.all().exclude(token__isnull=True):
         update_discord_user.apply_async(args=[discord_user.external_id])
 
 
 @shared_task
 def remote_sync_all_discord_users_groups():
-    for discord_user in DiscordUser.objects.all():
+    for discord_user in DiscordUser.objects.all().exclude(token__isnull=True):
         remote_sync_discord_user_discord_groups.apply_async(
             args=[discord_user.external_id])
 
 
 @shared_task
 def verify_all_discord_users_groups():
-    for discord_user in DiscordUser.objects.all():
+    for discord_user in DiscordUser.objects.all().exclude(token__isnull=True):
         verify_discord_user_groups.apply_async(
             args=[discord_user.external_id]
         )
@@ -44,8 +44,9 @@ def enforce_discord_nicknames(enforce_strategy):
     for discord_user in DiscordUser.objects.all():
         if enforce_strategy == "EVE_ONLINE":
             try:
-                from django_eveonline_connector.models import EveCharacter, EveToken 
-                character_name = EveCharacter.objects.get(token__user=discord_user.discord_token.user, token__primary=True).name 
+                from django_eveonline_connector.models import PrimaryEveCharacterAssociation, EveToken
+                character_name = PrimaryEveCharacterAssociation.objects.get(
+                    user=discord_user.discord_token.discord_token_user).character.name
                 nickname = discord_user.nickname.split("#")[0]
                 discriminator = discord_user.nickname.split("#")[1]
                 if character_name != nickname:
