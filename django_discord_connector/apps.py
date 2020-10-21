@@ -20,25 +20,27 @@ class DjangoDiscordConnectorConfig(AppConfig):
             try:
                 bind = apps.get_app_config('packagebinder').get_bind_object(
                     self.package_name, self.version)
+                # Required Task Bindings
+                bind.add_required_task(
+                    name="Discord: Sync User Groups",
+                    task="django_discord_connector.tasks.verify_all_discord_users_groups",
+                    interval=5,
+                    interval_period="minutes",
+                )
+                bind.add_required_task(
+                    name="Discord: Update User Information",
+                    task="django_discord_connector.tasks.sync_all_discord_users_accounts",
+                    interval=1,
+                    interval_period="days",
+                )
+                bind.add_optional_task(
+                    name="Discord: Hard Sync Users",
+                    task="django_discord_connector.tasks.remote_sync_all_discord_users_groups",
+                    interval=7,
+                    interval_period="days",
+                )
+                bind.save()
             except BindException as e:
+                print(e)
                 return
-            # Required Task Bindings
-            bind.add_required_task(
-                name="Discord: Sync User Groups",
-                task="django_discord_connector.tasks.verify_all_discord_users_groups",
-                interval=5,
-                interval_period="minutes",
-            )
-            bind.add_required_task(
-                name="Discord: Update User Information",
-                task="django_discord_connector.tasks.sync_all_discord_users_accounts",
-                interval=1,
-                interval_period="days",
-            )
-            bind.add_optional_task(
-                name="Discord: Hard Sync Users",
-                task="django_discord_connector.tasks.remote_sync_all_discord_users_groups",
-                interval=7,
-                interval_period="days",
-            )
-            bind.save()
+            
