@@ -16,20 +16,20 @@ These are tasks to be set up on a crontab schedule
 """
 @shared_task
 def sync_all_discord_users_accounts():
-    for discord_user in DiscordUser.objects.all().exclude(token__isnull=True):
+    for discord_user in DiscordUser.objects.all().exclude(discord_token__isnull=True):
         update_discord_user.apply_async(args=[discord_user.external_id])
 
 
 @shared_task
 def remote_sync_all_discord_users_groups():
-    for discord_user in DiscordUser.objects.all().exclude(token__isnull=True):
+    for discord_user in DiscordUser.objects.all().exclude(discord_token__isnull=True):
         remote_sync_discord_user_discord_groups.apply_async(
             args=[discord_user.external_id])
 
 
 @shared_task
 def verify_all_discord_users_groups():
-    for discord_user in DiscordUser.objects.all().exclude(token__isnull=True):
+    for discord_user in DiscordUser.objects.all().exclude(discord_token__isnull=True):
         verify_discord_user_groups.apply_async(
             args=[discord_user.external_id]
         )
