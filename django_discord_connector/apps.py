@@ -43,4 +43,6 @@ class DjangoDiscordConnectorConfig(AppConfig):
             except BindException as e:
                 print(e)
                 return
-            
+            except Exception as e:
+                print(e)
+                return
