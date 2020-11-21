@@ -41,7 +41,7 @@ def sso_callback(request):
     if not me['email']:
         messages.add_message(
             request, messages.ERROR, 'Could not find an email on your Discord profile. Please make sure your not signed in as a Guest Discord user.')
-        return redirect('dashboard')
+        return redirect('/')
     if me['email'] != request.user.email:
         messages.add_message(
             request, messages.WARNING, 'You linked a Discord account with a mismatched email, please verify you linked the correct Discord account.'
@@ -77,8 +77,8 @@ def add_sso_token(request):
         discord_client = DiscordClient.get_instance()
     except:
         messages.warning(
-            request, "The site administrator has not added the Discord Client to the admin panel.")
-        return redirect('dashboard')
+            request, "Discord Settings are not configured correctly. Contact your administrator.")
+        return redirect('/')
     oauth = OAuth2Session(discord_client.client_id,
                           redirect_uri=discord_client.callback_url, scope=scope, token=None, state=None)
     url, state = oauth.authorization_url(discord_client.base_uri)
