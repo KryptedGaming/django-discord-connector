@@ -1,9 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
+from django_singleton_admin.models import DjangoSingleton
 from django_discord_connector.request import DiscordRequest
 
 
-class DiscordClient(models.Model):
+class DiscordClient(DjangoSingleton):
     api_endpoint = models.URLField(default="https://discordapp.com/api/v6")
     base_uri = models.URLField(
         default="https://discordapp.com/api/oauth2/authorize")
@@ -29,7 +30,7 @@ class DiscordClient(models.Model):
         if DiscordClient.objects.all().exists():
             return DiscordClient.objects.all()[0]
         raise Exception(
-            "DiscordClient must be created before using Discord Connector features.")
+            "DiscordClient is not configured.")
 
     def serialize(self):
         return {
@@ -42,6 +43,10 @@ class DiscordClient(models.Model):
 
     def __str__(self):
         return self.callback_url
+    
+    class Meta:
+        verbose_name = "Discord Settings"
+        verbose_name_plural = "Discord Settings"
 
 
 class DiscordToken(models.Model):
