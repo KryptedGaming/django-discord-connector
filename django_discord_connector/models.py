@@ -21,8 +21,10 @@ class DiscordClient(DjangoSingleton):
     invite_link = models.URLField()
 
     def save(self, *args, **kwargs):
+        from django_discord_connector.tasks import sync_discord_groups
         if "discord.gg/" in self.invite_link:
             self.invite_link = self.invite_link.replace('discord.gg/', 'discordapp.com/api/invites/')
+        sync_discord_groups.apply_async()
         super(DiscordClient, self).save(*args, **kwargs)
 
     @staticmethod
