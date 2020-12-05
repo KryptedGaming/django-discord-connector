@@ -144,10 +144,16 @@ def update_discord_user(discord_user_id):
     response = DiscordRequest.get_instance().get_discord_user(discord_user_id)
     if responses[response.status_code] == 'OK':
         response = response.json()
-        discord_user.nickname = response['nick'] + \
-            "#" + response['user']['discriminator']
+
         discord_user.username = response['user']['username'] + \
             "#" + response['user']['discriminator']
+            
+        if 'nick' in response:
+            discord_user.nickname = response['nick'] + \
+                "#" + response['user']['discriminator']
+        else:
+            discord_user.nickname = discord_user.username 
+
         discord_user.save()
     else:
         if 'code' in response.json():
