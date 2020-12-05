@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase 
 from django.contrib.auth.models import User, Group 
 from django_discord_connector.models import DiscordUser, DiscordGroup, DiscordToken, DiscordClient
 from django_discord_connector.tasks import *
@@ -12,7 +12,7 @@ class MockDiscordResponse():
     def json(self):
         return self.response 
 
-class TestDiscordTaskSuite(TestCase):
+class TestDiscordTaskSuite(TransactionTestCase):
     def setUp(self):
         DiscordClient.objects.create(
             callback_url="https://localhost:8000",
@@ -56,15 +56,11 @@ class TestDiscordTaskSuite(TestCase):
         )
 
     def tearDown(self):
-        try:
-            self.user.delete()
-            self.group.delete()
-            self.discord_token.delete()
-            self.discord_user.delete()
-            self.no_token_discord_user.delete()
-            self.discord_group.delete()
-        except Exception as e:
-            pass
+        User.objects.all().delete()
+        Group.objects.all().delete()
+        DiscordToken.objects.all().delete()
+        DiscordUser.objects.all().delete()
+        DiscordGroup.objects.all().delete()
 
     @patch('django_discord_connector.tasks.remove_discord_user.apply_async')
     @patch('django_discord_connector.tasks.update_discord_user.apply_async')
@@ -80,9 +76,10 @@ class TestDiscordTaskSuite(TestCase):
 
     @patch('django_discord_connector.tasks.DiscordRequest.remove_role_from_user')
     def test_remove_user(self, mock_discord_call):
+        external_id = self.discord_user.external_id
         mock_discord_call.return_value = MockDiscordResponse(status_code=204)
         remove_discord_user(self.discord_user.external_id)
-        self.assertFalse(DiscordUser.objects.filter(external_id=self.discord_user.external_id).exists())
+        self.assertFalse(DiscordUser.objects.filter(external_id=external_id).exists())
 
     @patch('django_discord_connector.tasks.DiscordRequest.remove_role_from_user')
     def test_remove_user_failure_user_still_exists(self, mock_discord_call):

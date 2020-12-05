@@ -1,5 +1,5 @@
 from django.apps import AppConfig
-from django.db.models.signals import m2m_changed, pre_delete
+from django.db.models.signals import m2m_changed, post_delete
 from django.apps import apps
 
 class DjangoDiscordConnectorConfig(AppConfig):
@@ -10,14 +10,15 @@ class DjangoDiscordConnectorConfig(AppConfig):
     url_slug = 'discord'
 
     def ready(self):
-        from .signals import user_group_change_sync_discord_groups, user_delete
+        from .signals import user_group_change_sync_discord_groups, remove_discord_user_on_discord_token_removal
         from django.contrib.auth.models import User
+        from django_discord_connector.models import DiscordToken
         m2m_changed.connect(
             user_group_change_sync_discord_groups, sender=User.groups.through)
 
-        pre_delete.connect(
-            user_delete,
-            sender=User
+        post_delete.connect(
+            remove_discord_user_on_discord_token_removal,
+            sender=DiscordToken
         )
         if apps.is_installed('packagebinder'):
             from .bindings import create_bindings

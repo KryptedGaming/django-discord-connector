@@ -1,7 +1,7 @@
 from django.dispatch import receiver
-from django.db.models.signals import m2m_changed, pre_delete
+from django.db.models.signals import m2m_changed, post_delete
 from django.contrib.auth.models import User
-from .models import DiscordUser, DiscordGroup
+from .models import DiscordUser, DiscordGroup, DiscordToken
 from .tasks import verify_discord_user_groups, remove_discord_user
 
 import logging
@@ -24,14 +24,10 @@ def user_group_change_sync_discord_groups(sender, **kwargs):
     if "post" in kwargs.get('action'):
         verify_discord_user_groups.apply_async(args=[discord_user.external_id], countdown=30)
 
-@receiver(pre_delete, sender=User)
-def user_delete(sender, **kwargs):
-    django_user = kwargs.get('instance')
-
-    if DiscordUser.objects.filter(discord_token__user=django_user).exists():
-        discord_user = DiscordUser.objects.get(discord_token__user=django_user)
-    else:
-        return 
-
-    remove_discord_user.apply_async(args=[discord_user.external_id])
-    
+@receiver(post_delete, sender=DiscordToken)
+def remove_discord_user_on_discord_token_removal(sender, **kwargs):
+    discord_token = kwargs.get('instance')
+    try:
+        remove_discord_user.apply_async(args=[discord_token.discord_user.external_id])
+    except DiscordUser.DoesNotExist:
+        return # dangling token 

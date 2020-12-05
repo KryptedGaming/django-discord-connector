@@ -161,7 +161,11 @@ def update_discord_user(discord_user_id):
 
 @shared_task()
 def remove_discord_user(discord_user_id):
-    discord_user = DiscordUser.objects.get(external_id=discord_user_id)
+    discord_user = DiscordUser.objects.filter(external_id=discord_user_id).first()
+    
+    if not discord_user:
+        return 
+
     for discord_group in DiscordGroup.objects.all():
         # only purge groups that are mapped 
         if discord_group.group: 
