@@ -38,6 +38,11 @@ def sso_callback(request):
     join = requests.post(discord_client.invite_link, headers={
                          'Authorization': "Bearer " + token}).json()
     # Catch errors
+    if DiscordToken.objects.filter(discord_user__external_id=me['id']).exists():
+        discord_token = DiscordToken.objects.get(discord_user__external_id=me['id'])
+        if discord_token.user != request.user:
+            messages.error(request, "That Discord user is claimed by another user.")
+            return redirect('/')
     if not me['email']:
         messages.add_message(
             request, messages.ERROR, 'Could not find an email on your Discord profile. Please make sure your not signed in as a Guest Discord user.')
@@ -46,6 +51,8 @@ def sso_callback(request):
         messages.add_message(
             request, messages.WARNING, 'You linked a Discord account with a mismatched email, please verify you linked the correct Discord account.'
         )
+
+
     # Delete old token if exists
     if DiscordToken.objects.filter(user=request.user).exists():
         discord_token = request.user.discord_token
