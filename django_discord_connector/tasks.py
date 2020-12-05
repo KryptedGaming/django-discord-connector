@@ -67,9 +67,12 @@ def enforce_discord_nicknames(enforce_strategy):
 
 @shared_task
 def sync_discord_groups():
+    response = DiscordRequest.get_instance().get_guild_roles()
+    if responses[response.status_code] != 'OK':
+        raise Exception("Failed to pull discord groups. Check your Discord Settings.")
     # convert role list into dict of IDs
     discord_guild_roles = {
-        int(role['id']): role for role in DiscordRequest.get_instance().get_guild_roles().json()}
+        int(role['id']): role for role in response.json()}
     discord_local_roles = list(DiscordGroup.objects.all().values_list(
         'external_id', flat=True))  # get list of local roles we know about from database
 
