@@ -1,5 +1,6 @@
-import os
+import os, sys
 from setuptools import find_packages, setup
+from setuptools.command.test import test
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
     README = readme.read()
@@ -32,8 +33,12 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],
     install_requires=[
+        'django>=2.2.13',
+        'django-singleton-admin-2==1.1.0',
         'discord==1.0.1',
         'requests==2.22.0',
         'requests_oauthlib==1.2.0',
-    ]
+        'celery==4.0.2',
+    ],
+    test_suite='runtests.runtests',
 )
