@@ -89,3 +89,14 @@ class TestDiscordTaskSuite(TransactionTestCase):
         except Exception as e:
             pass 
         self.assertTrue(DiscordUser.objects.filter(external_id=self.discord_user.external_id).exists())
+
+    @patch('django_discord_connector.tasks.DiscordRequest.get_discord_user')
+    def test_update_discord_user_no_nickname(self, mock_discord_call):
+        mock_discord_call.return_value = MockDiscordResponse(status_code=200, response={
+            "nick": None,
+            "user": {
+                "discriminator": "#1337",
+                "username": "username",
+            }
+        })
+        update_discord_user(self.discord_user.external_id)
