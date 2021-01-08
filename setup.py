@@ -34,11 +34,11 @@ setup(
     ],
     install_requires=[
         'django>=2.2.13',
-        'django-singleton-admin-2==1.1.0',
-        'discord==1.0.1',
-        'requests==2.22.0',
-        'requests_oauthlib==1.2.0',
-        'celery==4.0.2',
+        'django-singleton-admin-2>=1.1.0',
+        'discord>=1.0.1',
+        'requests>=2.22.0',
+        'requests_oauthlib>=1.2.0',
+        'celery>=4.0.2',
     ],
     test_suite='runtests.runtests',
 )

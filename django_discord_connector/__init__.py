@@ -7,7 +7,7 @@
 
 __title__ = 'Django Discord Connector'
 __package_name__ = 'django-discord-connector'
-__version__ = '1.2.2'
+__version__ = '1.2.2rc2'
 __author__ = 'Krypted Gaming'
 __license__ = 'MIT License'
 __copyright__ = 'Copyright © 2017-2020 Krypted Gaming. All rights reserved.'
