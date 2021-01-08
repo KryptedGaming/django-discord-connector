@@ -45,6 +45,12 @@ task_binding = TaskBinding(
             "interval": 7,
             "interval_period": "days",
         },
+        {
+            "name": "Discord: Enforce Nicknames",
+            "task_name": "django_discord_connector.tasks.enforce_discord_nicknames",
+            "interval": 60,
+            "interval_period": "minutes"
+        }
     ]
 )
 

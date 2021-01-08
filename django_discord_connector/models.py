@@ -19,6 +19,7 @@ class DiscordClient(DjangoSingleton):
     client_secret = models.CharField(max_length=255)
     bot_token = models.CharField(max_length=255)
     invite_link = models.URLField()
+    name_enforcement_schema = models.CharField(max_length=255, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         from django_discord_connector.tasks import sync_discord_groups

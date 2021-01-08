@@ -19,7 +19,7 @@ if apps.is_installed('django_singleton_admin'):
     class DiscordClientAdmin(DjangoSingletonModelAdmin):
         fieldsets = (
             ('General Settings', {
-                'fields': ('callback_url', 'server_id', 'client_id', 'client_secret', 'bot_token', 'invite_link' )
+                'fields': ('callback_url', 'server_id', 'client_id', 'client_secret', 'bot_token', 'invite_link', 'name_enforcement_schema')
             }),
             ('Advanced Settings', {
                 'classes': ('collapse', 'open'),

@@ -13,6 +13,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_singleton_admin',
     'django_discord_connector',
+    'django_eveonline_connector', # integration tests
 ]
 
 ROOT_URLCONF = 'tests.app.urls'

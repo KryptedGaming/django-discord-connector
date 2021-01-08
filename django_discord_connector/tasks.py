@@ -1,5 +1,5 @@
 from celery import shared_task
-from django_discord_connector.models import DiscordUser, DiscordGroup, DiscordClient, DiscordChannel
+from django_discord_connector.models import DiscordUser, DiscordGroup, DiscordClient, DiscordChannel, DiscordToken
 from django_discord_connector.request import DiscordRequest
 from django.contrib.auth.models import Group
 from django.conf import settings
@@ -41,28 +41,54 @@ def verify_all_discord_users_groups():
         )
 
 @shared_task
-def enforce_discord_nicknames(enforce_strategy):
+def enforce_discord_nicknames():
     """
     Paid feature request: https://github.com/KryptedGaming/krypted/issues/302
     Quick task to pass over all DiscordUsers and enforce nickames as EVE Online character names
     """
     
+    user_settings = DiscordClient.get_instance()
+    schema = user_settings.name_enforcement_schema
+    if not schema:
+        return 
+    eve_online_variables = ["%character", "%corporation", "%alliance"]
+
+    if any(variable in schema for variable in eve_online_variables):
+        from django_eveonline_connector.models import PrimaryEveCharacterAssociation
+        is_eve_online_variables = True 
+    else:
+        is_eve_online_variables = False 
+
+    # Lazy algorithm, would rather check for names that don't follow nickname schema in future
     for discord_user in DiscordUser.objects.all():
-        if enforce_strategy == "EVE_ONLINE":
-            try:
-                from django_eveonline_connector.models import PrimaryEveCharacterAssociation, EveToken
-                character_name = PrimaryEveCharacterAssociation.objects.get(
-                    user=discord_user.discord_token.discord_token_user).character.name
-                nickname = discord_user.nickname.split("#")[0]
-                discriminator = discord_user.nickname.split("#")[1]
-                if character_name != nickname:
-                    discord_user.nickname = "%s#%s" % (character_name, discriminator)
-                    discord_user.save()
-                    update_remote_discord_user_nickname.apply_async(args=[discord_user.external_id])
-            except Exception as e:
-                logger.error(e)
-        else:
-            pass 
+        try:
+            user = DiscordToken.objects.get(discord_user=discord_user).user 
+            name = schema 
+            if '%username' in name:
+                name = name.replace("%username", user.username)
+
+            if is_eve_online_variables:
+                character = PrimaryEveCharacterAssociation.objects.get(user=user).character
+                if '%character' in name:
+                    name = name.replace("%character", character.name)
+                if '%corporation' in name:
+                    name = name.replace("%corporation", character.corporation.ticker)
+                if '%alliance' in name:
+                    name = name.replace("%alliance", character.corporation.alliance.ticker)
+                
+            # only call updates for names that have changed (can call more freqeuently)
+            if discord_user.nickname != name:
+                discord_user.nickname = name 
+                discord_user.save()
+                update_remote_discord_user_nickname.apply_async(args=[discord_user.external_id])
+
+        except PrimaryEveCharacterAssociation.DoesNotExist:
+            logger.warning(f"Failed to update nickname for {discord_user}, no EVE Online character set.")
+        except DiscordToken.DoesNotExist:
+            logger.warning(f"Failed to update nickname for {discord_user}, missing Discord token.")
+        except Exception as e:
+            logger.error(f"Failed to update nickname for {discord_user}, unknown exception. See additional logs.")
+            logger.exception(e)
 
 
 @shared_task

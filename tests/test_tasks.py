@@ -100,3 +100,42 @@ class TestDiscordTaskSuite(TransactionTestCase):
             }
         })
         update_discord_user(self.discord_user.external_id)
+
+    @patch('django_discord_connector.tasks.update_remote_discord_user_nickname')
+    def test_enforce_discord_nicknames(self, mock_task):
+        from django_eveonline_connector.models import PrimaryEveCharacterAssociation, EveCharacter, EveCorporation, EveAlliance 
+
+        alliance = EveAlliance.objects.create(
+            external_id=3,
+            name="Alliance Name",
+            ticker="ALLI"
+        )
+
+        corporation = EveCorporation.objects.create(
+            external_id=2,
+            name="Corporation Name",
+            ticker="CORP",
+            alliance=alliance
+        )
+
+        character = EveCharacter.objects.create(
+            external_id=1,
+            name="Character Name",
+            corporation=corporation
+        )
+        
+        PrimaryEveCharacterAssociation(
+            user=self.user,
+            character=character
+        ).save()
+
+        mock_task.return_value = None
+
+        settings = DiscordClient.get_instance()
+        settings.name_enforcement_schema = "[%alliance] [%corporation] [%username] - [%character]"
+        settings.save()
+
+        enforce_discord_nicknames()
+
+        self.discord_user.refresh_from_db()
+        self.assertEqual("[ALLI] [CORP] [test] - [Character Name]", self.discord_user.nickname)
